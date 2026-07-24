@@ -547,19 +547,25 @@ const DEFAULT_COLABORADORES = [
   { nombre: 'Sebastián Saá', telefono: '+593999935936' }
 ];
 
-async function cargarDatos(){
-  try{
-    const r = await window.storage.get('registros', true);
-    registros = JSON.parse(r.value);
-  }catch(e){ registros = []; }
-
-  try{
-    const c = await window.storage.get('colaboradores', true);
-    colaboradores = JSON.parse(c.value);
-  }catch(e){
-    colaboradores = DEFAULT_COLABORADORES;
-    await guardarColaboradores();
+async function cargarDatos() {
+  try {
+    const respuesta = await fetch(SHEETS_URL);
+    registros = await respuesta.json();
+  } catch (e) {
+    registros = [];
+    console.error(e);
   }
+  try {
+    colaboradores =
+      JSON.parse(localStorage.getItem("colaboradores"));
+    if (!colaboradores) {
+      colaboradores = DEFAULT_COLABORADORES;
+      guardarColaboradores();
+    }
+  } catch {
+    colaboradores = DEFAULT_COLABORADORES;
+    guardarColaboradores();
+  } 
 }
 
 function sincronizarConSheets(registro){
@@ -572,19 +578,25 @@ function sincronizarConSheets(registro){
   }).catch(() => { /* silencioso: no bloquea el flujo si falla la red */ });
 }
 
-async function guardarRegistros(){
-  try{
-    await window.storage.set('registros', JSON.stringify(registros), true);
-  }catch(e){
-    mostrarToast('No se pudo guardar el registro. Intenta de nuevo.');
+async function guardarRegistros() {
+  try {
+    localStorage.setItem(
+      "registros",
+      JSON.stringify(registros)
+    );
+  } catch (e) {
+    mostrarToast("No se pudo guardar el registro.");
   }
 }
 
-async function guardarColaboradores(){
-  try{
-    await window.storage.set('colaboradores', JSON.stringify(colaboradores), true);
-  }catch(e){
-    mostrarToast('No se pudo guardar el listado de colaboradores.');
+async function guardarColaboradores() {
+  try {
+    localStorage.setItem(
+      "colaboradores",
+      JSON.stringify(colaboradores)
+    );
+  } catch (e) {
+    mostrarToast("No se pudo guardar el listado.");
   }
 }
 
@@ -984,6 +996,10 @@ function mostrarToast(msg){
   renderTabla();
   renderColaboradores();
   setInterval(actualizarFechaHora, 30000);
+    setInterval(async ()=>{
+      await cargarDatos();
+      renderTabla();
+  },30000)
 })();
 </script>
 </body>
