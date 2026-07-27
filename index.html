@@ -52,7 +52,6 @@
     function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
     function toast(message){const el=document.getElementById('toast');el.textContent=message;el.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('show'),3500);}
     function setBusy(button, busy, label){button.disabled=busy;if(label)button.textContent=busy?'Guardando…':label;}
-    function apiUrl(action){return `${SHEETS_URL}?action=${encodeURIComponent(action)}&t=${Date.now()}`;}
     function apiUrl(action, params={}){const query=new URLSearchParams({action,t:String(Date.now()),...params});return `${SHEETS_URL}${SHEETS_URL.includes('?')?'&':'?'}${query}`;}
     async function request(action, payload){
       const response = await fetch(SHEETS_URL, {method:'POST', body:new URLSearchParams({action, payload:JSON.stringify(payload)})});
