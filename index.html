@@ -44,7 +44,7 @@
   <script>
     'use strict';
     // Reemplace solo esta URL si crea un nuevo despliegue de Apps Script.
-    const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbx1pR-wn9Y4dcd3LV1Ef_Cx8Q8aEFRwR9BMFZi88p6sRu62CgQZvzsik53hzJoaopZrmg/exec';
+    const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwbUCBDow9CykNsEDLxx1HJ2RmfqH1Mxpi1MXBDA62U5ddzHqQ-4_nOjUVmmcSd7QyV7A/exec';
     const REFRESH_MS = 30000;
     let records = [], collaborators = [], filter = 'todos', activeRecordId = null, lastRecordId = null;
     let deliveryPad, receivePad, refreshTimer, isRefreshing = false;
@@ -60,8 +60,6 @@
       if(!data.ok) throw new Error(data.error || 'No se pudo guardar la información.');
       return data;
     }
-    async function get(action){
-      const response = await fetch(apiUrl(action));
     async function get(action, params={}){
       const response = await fetch(apiUrl(action, params));
       if(!response.ok) throw new Error(`El servidor respondió ${response.status}.`);
@@ -100,7 +98,6 @@
     }
     function recordInfo(r){return `<div><div class="k">Fecha / hora entrega</div><div class="v">${escapeHtml(r.fecha)} · ${escapeHtml(r.horaEntrega)}</div></div><div><div class="k">Entregado por</div><div class="v">${escapeHtml(r.entregadoPor)}</div></div><div><div class="k">Documento</div><div class="v">${escapeHtml(r.descripcion)}</div></div><div><div class="k">Destinatario</div><div class="v">${escapeHtml(r.destinatarioNombre)}</div></div>`;}
     function openReceive(id){const r=records.find(x=>x.id===id);if(!r)return;activeRecordId=id;document.getElementById('receive-info').innerHTML=recordInfo(r);document.getElementById('r-name').value=r.destinatarioNombre;document.getElementById('receive-error').textContent='';document.getElementById('receive-modal').classList.add('active');if(!receivePad)receivePad=signaturePad('sig-receive','ph-receive');else receivePad.clear();}
-    function openSignatures(id){const r=records.find(x=>x.id===id);if(!r)return;document.getElementById('signatures-info').innerHTML=recordInfo(r);document.getElementById('delivery-signature').src=r.firmaEntrega||'';const wrap=document.getElementById('receive-signature-wrap');wrap.hidden=!r.firmaRecepcion;if(r.firmaRecepcion)document.getElementById('receive-signature').src=r.firmaRecepcion;document.getElementById('signatures-modal').classList.add('active');}
     async function openSignatures(id){
       const r=records.find(x=>x.id===id);if(!r)return;
       const deliveryImage=document.getElementById('delivery-signature'),receiveImage=document.getElementById('receive-signature'),wrap=document.getElementById('receive-signature-wrap');
