@@ -44,7 +44,7 @@
   <script>
     'use strict';
     // Reemplace solo esta URL si crea un nuevo despliegue de Apps Script.
-    const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxhwtZFAqRohif7iuE3AYkbsCPB_AZKhgmU2iEar7l3MpWu4kvXa_45tNqx_Bj_KovyqA/exec';
+    const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwbUCBDow9CykNsEDLxx1HJ2RmfqH1Mxpi1MXBDA62U5ddzHqQ-4_nOjUVmmcSd7QyV7A/exec';
     const REFRESH_MS = 30000;
     let records = [], collaborators = [], filter = 'todos', activeRecordId = null, lastRecordId = null;
     let deliveryPad, receivePad, refreshTimer, isRefreshing = false;
@@ -53,6 +53,7 @@
     function toast(message){const el=document.getElementById('toast');el.textContent=message;el.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('show'),3500);}
     function setBusy(button, busy, label){button.disabled=busy;if(label)button.textContent=busy?'Guardando…':label;}
     function apiUrl(action){return `${SHEETS_URL}?action=${encodeURIComponent(action)}&t=${Date.now()}`;}
+    function apiUrl(action, params={}){const query=new URLSearchParams({action,t:String(Date.now()),...params});return `${SHEETS_URL}${SHEETS_URL.includes('?')?'&':'?'}${query}`;}
     async function request(action, payload){
       const response = await fetch(SHEETS_URL, {method:'POST', body:new URLSearchParams({action, payload:JSON.stringify(payload)})});
       if(!response.ok) throw new Error(`El servidor respondió ${response.status}.`);
@@ -62,6 +63,8 @@
     }
     async function get(action){
       const response = await fetch(apiUrl(action));
+    async function get(action, params={}){
+      const response = await fetch(apiUrl(action, params));
       if(!response.ok) throw new Error(`El servidor respondió ${response.status}.`);
       const data = await response.json();
       if(!data.ok) throw new Error(data.error || 'No se pudieron cargar los datos.');
@@ -99,6 +102,16 @@
     function recordInfo(r){return `<div><div class="k">Fecha / hora entrega</div><div class="v">${escapeHtml(r.fecha)} · ${escapeHtml(r.horaEntrega)}</div></div><div><div class="k">Entregado por</div><div class="v">${escapeHtml(r.entregadoPor)}</div></div><div><div class="k">Documento</div><div class="v">${escapeHtml(r.descripcion)}</div></div><div><div class="k">Destinatario</div><div class="v">${escapeHtml(r.destinatarioNombre)}</div></div>`;}
     function openReceive(id){const r=records.find(x=>x.id===id);if(!r)return;activeRecordId=id;document.getElementById('receive-info').innerHTML=recordInfo(r);document.getElementById('r-name').value=r.destinatarioNombre;document.getElementById('receive-error').textContent='';document.getElementById('receive-modal').classList.add('active');if(!receivePad)receivePad=signaturePad('sig-receive','ph-receive');else receivePad.clear();}
     function openSignatures(id){const r=records.find(x=>x.id===id);if(!r)return;document.getElementById('signatures-info').innerHTML=recordInfo(r);document.getElementById('delivery-signature').src=r.firmaEntrega||'';const wrap=document.getElementById('receive-signature-wrap');wrap.hidden=!r.firmaRecepcion;if(r.firmaRecepcion)document.getElementById('receive-signature').src=r.firmaRecepcion;document.getElementById('signatures-modal').classList.add('active');}
+    async function openSignatures(id){
+      const r=records.find(x=>x.id===id);if(!r)return;
+      const deliveryImage=document.getElementById('delivery-signature'),receiveImage=document.getElementById('receive-signature'),wrap=document.getElementById('receive-signature-wrap');
+      document.getElementById('signatures-info').innerHTML=recordInfo(r);deliveryImage.removeAttribute('src');receiveImage.removeAttribute('src');deliveryImage.alt='Cargando firma de entrega…';wrap.hidden=!r.firmaRecepcionId;document.getElementById('signatures-modal').classList.add('active');
+      try{
+        const [delivery,receipt]=await Promise.all([get('signature_get',{id,kind:'entrega'}),r.firmaRecepcionId?get('signature_get',{id,kind:'recepcion'}):Promise.resolve({signature:''})]);
+        if(delivery.signature){deliveryImage.src=delivery.signature;deliveryImage.alt='Firma de entrega';}
+        if(receipt.signature){receiveImage.src=receipt.signature;wrap.hidden=false;}
+      }catch(error){console.error(error);toast(`No se pudieron cargar las firmas: ${error.message}`);}
+    }
     function closeModal(id){document.getElementById(id).classList.remove('active');if(id==='receive-modal')activeRecordId=null;}
     document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.dataset.close)));
     document.getElementById('clear-entrega').addEventListener('click',()=>deliveryPad.clear());document.getElementById('clear-receive').addEventListener('click',()=>receivePad?.clear());
@@ -124,4 +137,3 @@
   </script>
 </body>
 </html>
-
