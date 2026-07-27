@@ -1,1006 +1,127 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-<title>Spingarn · Control de Entrega y Recepción de Documentos</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<style>
-  :root{
-    --bg-dark:#17151c;
-    --bg-dark-2:#211e29;
-    --fuchsia:#c6007e;
-    --fuchsia-bright:#ff3fa4;
-    --cream:#f7f4f2;
-    --ink:#211e29;
-    --muted:#726e7d;
-    --success:#2fae66;
-    --success-bg:#e6f6ed;
-    --warning:#b8790f;
-    --warning-bg:#fbf0dc;
-    --border:#e4dfe6;
-    --font-display:'Sora',sans-serif;
-    --font-body:'Inter',sans-serif;
-    --font-mono:'IBM Plex Mono',monospace;
-  }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;height:100%;}
-  body{
-    font-family:var(--font-body);
-    background:var(--cream);
-    color:var(--ink);
-    display:flex;
-    min-height:100vh;
-  }
-  /* ---------- Sidebar ---------- */
-  .sidebar{
-    width:230px;
-    flex-shrink:0;
-    background:var(--bg-dark);
-    color:#fff;
-    display:flex;
-    flex-direction:column;
-    padding:28px 18px;
-  }
-  .brand{
-    font-family:var(--font-display);
-    font-weight:800;
-    font-size:19px;
-    letter-spacing:0.02em;
-    margin-bottom:2px;
-  }
-  .brand span{color:var(--fuchsia-bright);}
-  .brand-sub{
-    font-size:11px;
-    color:#8c8896;
-    margin-bottom:34px;
-    letter-spacing:0.03em;
-  }
-  .nav-item{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:11px 12px;
-    border-radius:9px;
-    font-size:14px;
-    font-weight:500;
-    color:#c9c5d3;
-    cursor:pointer;
-    margin-bottom:4px;
-    transition:background .15s ease, color .15s ease;
-    user-select:none;
-  }
-  .nav-item svg{width:16px;height:16px;flex-shrink:0;}
-  .nav-item:hover{background:#2a2635;color:#fff;}
-  .nav-item.active{background:linear-gradient(135deg,var(--fuchsia),#8a0060);color:#fff;}
-  .sidebar-foot{
-    margin-top:auto;
-    font-size:11px;
-    color:#615d6b;
-    line-height:1.5;
-    padding-top:18px;
-    border-top:1px solid #2a2635;
-  }
-  /* ---------- Main ---------- */
-  .main{
-    flex:1;
-    padding:30px 40px;
-    max-width:1180px;
-  }
-  .view{display:none;}
-  .view.active{display:block;}
-  h1{
-    font-family:var(--font-display);
-    font-size:22px;
-    font-weight:700;
-    margin:0 0 4px 0;
-  }
-  .subtitle{color:var(--muted);font-size:13.5px;margin:0 0 26px 0;}
-  .card{
-    background:#fff;
-    border:1px solid var(--border);
-    border-radius:14px;
-    padding:26px;
-    margin-bottom:22px;
-  }
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
-  .field{margin-bottom:18px;}
-  .field label{
-    display:block;
-    font-size:12.5px;
-    font-weight:600;
-    color:var(--ink);
-    margin-bottom:6px;
-  }
-  .field .hint{font-weight:400;color:var(--muted);font-size:11.5px;margin-left:6px;}
-  input[type=text], select{
-    width:100%;
-    padding:11px 13px;
-    border:1.5px solid var(--border);
-    border-radius:9px;
-    font-family:var(--font-body);
-    font-size:14px;
-    background:#fff;
-    color:var(--ink);
-    transition:border-color .15s ease;
-  }
-  input[type=text]:focus, select:focus{
-    outline:none;
-    border-color:var(--fuchsia);
-  }
-  input[readonly]{background:#f5f3f6;color:var(--muted);font-family:var(--font-mono);font-size:13px;}
-  .readonly-row{display:flex;gap:14px;}
-  .readonly-row .field{flex:1;}
-  .sig-wrap{
-    border:1.5px dashed var(--border);
-    border-radius:10px;
-    background:#fdfcfe;
-    position:relative;
-    touch-action:none;
-  }
-  canvas.sigpad{
-    width:100%;
-    height:150px;
-    display:block;
-    cursor:crosshair;
-    border-radius:10px;
-  }
-  .sig-placeholder{
-    position:absolute;
-    top:50%;left:50%;
-    transform:translate(-50%,-50%);
-    color:#c4bfcc;
-    font-size:13px;
-    pointer-events:none;
-  }
-  .sig-actions{display:flex;justify-content:space-between;align-items:center;margin-top:8px;}
-  .link-btn{
-    background:none;border:none;color:var(--muted);font-size:12.5px;
-    cursor:pointer;text-decoration:underline;font-family:var(--font-body);
-    padding:2px 0;
-  }
-  .link-btn:hover{color:var(--fuchsia);}
-  .btn{
-    font-family:var(--font-body);
-    font-weight:600;
-    font-size:14px;
-    padding:12px 22px;
-    border-radius:9px;
-    border:none;
-    cursor:pointer;
-    transition:filter .15s ease, transform .05s ease;
-  }
-  .btn:active{transform:scale(0.98);}
-  .btn-primary{background:var(--fuchsia);color:#fff;}
-  .btn-primary:hover{filter:brightness(1.08);}
-  .btn-primary:disabled{background:#d8c9d4;cursor:not-allowed;}
-  .btn-ghost{background:#fff;border:1.5px solid var(--border);color:var(--ink);}
-  .btn-ghost:hover{border-color:var(--fuchsia);color:var(--fuchsia);}
-  .btn-whatsapp{background:#25D366;color:#fff;}
-  .btn-whatsapp:hover{filter:brightness(1.05);}
-  .btn-sm{padding:7px 12px;font-size:12.5px;border-radius:7px;}
-  .error-msg{color:#b3234a;font-size:12.5px;margin-top:10px;min-height:16px;}
-  /* ---------- confirmation / stamp ---------- */
-  .confirm-panel{
-    display:flex;
-    align-items:center;
-    gap:26px;
-    background:linear-gradient(135deg,#fbeef4,#fff);
-    border:1.5px solid #f3cfe3;
-    border-radius:14px;
-    padding:24px 28px;
-  }
-  .stamp{
-    flex-shrink:0;
-    width:96px;height:96px;
-    border:4px solid var(--fuchsia);
-    border-radius:50%;
-    display:flex;align-items:center;justify-content:center;
-    transform:rotate(-9deg);
-    color:var(--fuchsia);
-    font-family:var(--font-display);
-    font-weight:800;
-    font-size:13px;
-    text-align:center;
-    line-height:1.2;
-    opacity:.9;
-  }
-  .confirm-text b{display:block;font-family:var(--font-display);font-size:15px;margin-bottom:3px;}
-  .confirm-text{font-size:13.5px;color:var(--muted);}
-  .confirm-actions{margin-top:14px;display:flex;gap:10px;}
-  /* ---------- Table ---------- */
-  .stats-row{display:flex;gap:14px;margin-bottom:22px;}
-  .stat-card{
-    flex:1;background:#fff;border:1px solid var(--border);border-radius:12px;
-    padding:16px 18px;
-  }
-  .stat-num{font-family:var(--font-display);font-size:24px;font-weight:800;}
-  .stat-label{font-size:12px;color:var(--muted);margin-top:2px;}
-  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px;flex-wrap:wrap;}
-  .tabs{display:flex;gap:6px;}
-  .tab{
-    padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;
-    color:var(--muted);cursor:pointer;background:#fff;border:1px solid var(--border);
-  }
-  .tab.active{background:var(--ink);color:#fff;border-color:var(--ink);}
-  .search-box{
-    padding:9px 13px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;width:230px;
-    font-family:var(--font-body);
-  }
-  table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;}
-  thead tr{background:#faf8fb;}
-  th{
-    text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;
-    color:var(--muted);padding:12px 14px;border-bottom:1.5px solid var(--border);font-weight:700;
-  }
-  td{padding:13px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle;}
-  tr:last-child td{border-bottom:none;}
-  .mono{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);}
-  .badge{
-    display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;
-  }
-  .badge.pendiente{background:var(--warning-bg);color:var(--warning);}
-  .badge.completado{background:var(--success-bg);color:var(--success);}
-  .empty-state{text-align:center;padding:50px 20px;color:var(--muted);font-size:13.5px;}
-  .table-wrap{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;}
-  .table-scroll{overflow-x:auto;}
-  /* ---------- Modal ---------- */
-  .modal-bg{
-    display:none;position:fixed;inset:0;background:rgba(23,21,28,.55);
-    align-items:center;justify-content:center;z-index:50;padding:20px;
-  }
-  .modal-bg.active{display:flex;}
-  .modal{
-    background:#fff;border-radius:16px;padding:28px;max-width:520px;width:100%;
-    max-height:88vh;overflow-y:auto;
-  }
-  .modal h2{font-family:var(--font-display);font-size:18px;margin:0 0 4px 0;}
-  .modal .modal-sub{color:var(--muted);font-size:13px;margin-bottom:20px;}
-  .info-box{
-    background:#faf8fb;border-radius:10px;padding:14px 16px;margin-bottom:20px;font-size:13px;
-    display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;
-  }
-  .info-box .lbl{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.03em;}
-  .info-box .val{font-weight:600;margin-top:1px;}
-  .sig-preview{max-width:100%;border:1px solid var(--border);border-radius:8px;background:#fdfcfe;}
-  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;}
-  .close-x{
-    position:absolute;top:18px;right:20px;background:none;border:none;font-size:20px;
-    color:var(--muted);cursor:pointer;line-height:1;
-  }
-  .modal{position:relative;}
-  /* colaboradores */
-  .colab-row{display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;}
-  .colab-row .field{flex:1;margin-bottom:0;}
-  .toast{
-    position:fixed;bottom:26px;left:50%;transform:translateX(-50%);
-    background:var(--ink);color:#fff;padding:12px 20px;border-radius:10px;font-size:13.5px;
-    box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:100;opacity:0;pointer-events:none;
-    transition:opacity .2s ease, transform .2s ease;
-  }
-  .toast.show{opacity:1;transform:translate(-50%,-4px);}
-  .icon-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:4px 6px;}
-  .icon-btn:hover{color:var(--fuchsia);}
-  @media(max-width:900px){
-    body{flex-direction:column;}
-    .sidebar{width:100%;flex-direction:row;padding:14px 18px;align-items:center;}
-    .brand-sub{display:none;}
-    .sidebar-foot{display:none;}
-    .nav-item{margin-bottom:0;}
-    .brand{margin-bottom:0;margin-right:14px;}
-    .main{padding:20px;}
-    .grid2{grid-template-columns:1fr;}
-    .confirm-panel{flex-direction:column;text-align:center;}
-    .info-box{grid-template-columns:1fr;}
-  }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Spingarn · Control de documentos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    :root{--ink:#211e29;--dark:#17151c;--accent:#c6007e;--accent2:#ff3fa4;--paper:#f7f4f2;--muted:#726e7d;--border:#e4dfe6;--ok:#2fae66;--warn:#b8790f}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--paper);color:var(--ink);font:14px Inter,system-ui,sans-serif;display:flex}.sidebar{width:235px;background:var(--dark);color:white;padding:28px 18px;display:flex;flex-direction:column}.brand{font:800 19px Sora,sans-serif}.brand span{color:var(--accent2)}.sub{margin:4px 0 32px;color:#9b96a7;font-size:11px}.nav{border:0;background:transparent;color:#c9c5d3;text-align:left;border-radius:9px;padding:12px;margin:2px 0;cursor:pointer;font:600 14px Inter}.nav:hover,.nav.active{background:linear-gradient(135deg,var(--accent),#8a0060);color:#fff}.foot{margin-top:auto;padding-top:18px;border-top:1px solid #302c3a;color:#8c8896;font-size:11px;line-height:1.5}.main{width:min(1180px,100%);padding:30px 40px}.view{display:none}.view.active{display:block}h1,h2{font-family:Sora,sans-serif;margin:0 0 5px}h1{font-size:22px}.subtitle{margin:0 0 25px;color:var(--muted)}.card,.table-wrap,.stat{background:#fff;border:1px solid var(--border);border-radius:14px}.card{padding:26px;margin-bottom:22px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.row{display:flex;gap:14px}.row .field{flex:1}.field{margin-bottom:18px}.field label{display:block;font-size:12px;font-weight:700;margin-bottom:6px}.hint{font-weight:400;color:var(--muted)}input,select{width:100%;font:14px Inter;padding:11px 13px;border:1.5px solid var(--border);border-radius:9px;background:white;color:var(--ink)}input:focus,select:focus{outline:0;border-color:var(--accent)}input[readonly]{background:#f5f3f6;color:var(--muted)}.sig-wrap{position:relative;border:1.5px dashed var(--border);border-radius:10px;background:#fdfcfe;touch-action:none}.sigpad{width:100%;height:150px;display:block;cursor:crosshair}.placeholder{position:absolute;inset:0;display:grid;place-items:center;color:#c4bfcc;pointer-events:none}.sig-actions{margin-top:8px}.link{border:0;background:transparent;color:var(--muted);text-decoration:underline;cursor:pointer;padding:2px 0}.btn{border:0;border-radius:9px;padding:11px 18px;font:600 14px Inter;cursor:pointer}.btn:disabled{opacity:.55;cursor:not-allowed}.primary{background:var(--accent);color:#fff}.secondary{background:#fff;border:1px solid var(--border);color:var(--ink)}.success{background:#25d366;color:#fff}.error{min-height:18px;color:#b3234a;font-size:12px;margin:-8px 0 12px}.confirmation{display:flex;gap:20px;align-items:center;background:#fff7fb;border:1px solid #f3cfe3;border-radius:12px;padding:20px}.stamp{color:var(--accent);border:3px solid var(--accent);border-radius:50%;width:82px;height:82px;display:grid;place-items:center;text-align:center;font:800 12px Sora;transform:rotate(-8deg)}.stats{display:flex;gap:14px;margin-bottom:22px}.stat{flex:1;padding:16px}.num{font:800 25px Sora}.label{color:var(--muted);font-size:12px}.toolbar{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:15px;flex-wrap:wrap}.tabs{display:flex;gap:6px}.tab{border:1px solid var(--border);background:#fff;border-radius:8px;padding:8px 13px;cursor:pointer;font-weight:600;color:var(--muted)}.tab.active{background:var(--ink);color:#fff;border-color:var(--ink)}.search{width:240px}.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:860px}th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle}th{font-size:10px;text-transform:uppercase;color:var(--muted)}tr:last-child td{border:0}.mono{font:12px ui-monospace,SFMono-Regular,monospace;color:var(--muted)}.badge{border-radius:20px;padding:4px 9px;font-size:11px;font-weight:700}.pending{background:#fbf0dc;color:var(--warn)}.completed{background:#e6f6ed;color:var(--ok)}.empty{text-align:center;padding:48px;color:var(--muted)}.small{font-size:12px;padding:7px 10px}.modal-bg{display:none;position:fixed;inset:0;background:#17151c99;z-index:10;align-items:center;justify-content:center;padding:20px}.modal-bg.active{display:flex}.modal{position:relative;width:min(540px,100%);max-height:88vh;overflow:auto;background:#fff;border-radius:16px;padding:27px}.close{position:absolute;right:17px;top:14px;border:0;background:transparent;font-size:24px;color:var(--muted);cursor:pointer}.info{display:grid;grid-template-columns:1fr 1fr;gap:12px;background:#faf8fb;padding:14px;border-radius:10px;margin:18px 0}.info .k{font-size:10px;text-transform:uppercase;color:var(--muted)}.info .v{font-weight:600;margin-top:2px}.preview{width:100%;border:1px solid var(--border);border-radius:8px;background:#fdfcfe}.actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.colab{display:flex;gap:10px;align-items:end}.colab .field{flex:1}.toast{position:fixed;z-index:20;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:10px;padding:12px 18px;opacity:0;pointer-events:none;transition:.2s}.toast.show{opacity:1;transform:translate(-50%,-5px)}
+    @media(max-width:850px){body{display:block}.sidebar{width:100%;padding:14px 18px;flex-direction:row;align-items:center;gap:7px}.sub,.foot{display:none}.brand{margin-right:8px;font-size:15px}.nav{padding:8px;font-size:12px}.main{padding:20px}.grid,.info{grid-template-columns:1fr}.row,.stats{flex-direction:column}.confirmation{align-items:flex-start}.colab{flex-direction:column;align-items:stretch}}
+  </style>
 </head>
 <body>
-
-<div class="sidebar">
-  <div>
-    <div class="brand">Spingarn<span>·</span>Recepción</div>
-    <div class="brand-sub">Control de entrega y recepción</div>
-  </div>
-  <div class="nav-item active" data-view="entrega">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-    Nueva entrega
-  </div>
-  <div class="nav-item" data-view="trazabilidad">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-    Trazabilidad
-  </div>
-  <div class="nav-item" data-view="colaboradores">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><circle cx="17" cy="8.5" r="2.2"/><path d="M15.5 14.2c2.4.4 4 2.2 4 4.8"/></svg>
-    Colaboradores
-  </div>
-  <div class="sidebar-foot">
-    Los registros y la lista de colaboradores son compartidos: cualquier persona con este enlace puede verlos y editarlos.
-  </div>
-</div>
-
-<div class="main">
-
-  <!-- ================= VIEW: NUEVA ENTREGA ================= -->
-  <div class="view active" id="view-entrega">
-    <h1>Nueva entrega de documento</h1>
-    <p class="subtitle">Fecha y hora se registran automáticamente al guardar.</p>
-
-    <div class="card" id="entrega-form-card">
-      <div class="readonly-row">
-        <div class="field">
-          <label>Fecha</label>
-          <input type="text" id="f-fecha" readonly>
-        </div>
-        <div class="field">
-          <label>Hora</label>
-          <input type="text" id="f-hora" readonly>
-        </div>
+  <aside class="sidebar">
+    <div><div class="brand">Spingarn<span>·</span>Recepción</div><div class="sub">Control de entrega y recepción</div></div>
+    <button class="nav active" data-view="entrega">Nueva entrega</button>
+    <button class="nav" data-view="trazabilidad">Trazabilidad</button>
+    <button class="nav" data-view="colaboradores">Colaboradores</button>
+    <div class="foot">Los registros, firmas y colaboradores se consultan desde la hoja compartida.</div>
+  </aside>
+  <main class="main">
+    <section class="view active" id="view-entrega">
+      <h1>Nueva entrega de documento</h1><p class="subtitle">La fecha y hora se registran automáticamente al guardar.</p>
+      <div class="card" id="form-card"><div class="row"><div class="field"><label>Fecha</label><input id="f-fecha" readonly></div><div class="field"><label>Hora</label><input id="f-hora" readonly></div></div>
+        <div class="grid"><div class="field"><label>Entregado por</label><input id="f-entregado" placeholder="Nombre de quien entrega"></div><div class="field"><label>Destinatario <span class="hint">(recibirá el aviso)</span></label><select id="f-destinatario"></select></div></div>
+        <div class="field"><label>Qué se entrega</label><input id="f-descripcion" placeholder="Ej. Contrato firmado, factura, notificación..."></div>
+        <div class="field"><label>Firma de quien entrega</label><div class="sig-wrap"><canvas class="sigpad" id="sig-entrega"></canvas><div class="placeholder" id="ph-entrega">Firme aquí con el mouse o el dedo</div></div><div class="sig-actions"><button class="link" id="clear-entrega">Limpiar firma</button></div></div>
+        <div class="error" id="entrega-error"></div><button class="btn primary" id="save-delivery">Registrar entrega</button>
       </div>
+      <div class="card" id="confirm-card" hidden><div class="confirmation"><div class="stamp">ENTREGADO<br>SPINGARN</div><div><b id="confirm-title">Entrega registrada correctamente</b><p class="subtitle" id="confirm-text" style="margin:5px 0 12px"></p><button class="btn success" id="whatsapp">Enviar aviso por WhatsApp</button> <button class="btn secondary" id="new-delivery">Registrar otra entrega</button></div></div></div>
+    </section>
+    <section class="view" id="view-trazabilidad"><h1>Trazabilidad</h1><p class="subtitle">Registro centralizado de entregas y recepciones.</p>
+      <div class="stats"><div class="stat"><div class="num" id="stat-total">0</div><div class="label">Registros totales</div></div><div class="stat"><div class="num" id="stat-pending" style="color:var(--warn)">0</div><div class="label">Pendientes de retiro</div></div><div class="stat"><div class="num" id="stat-completed" style="color:var(--ok)">0</div><div class="label">Completados</div></div></div>
+      <div class="toolbar"><div class="tabs"><button class="tab active" data-filter="todos">Todos</button><button class="tab" data-filter="pendiente">Pendientes</button><button class="tab" data-filter="completado">Completados</button></div><div><input class="search" id="search" placeholder="Buscar por nombre o documento"> <button class="btn secondary small" id="export">Exportar a Excel</button></div></div>
+      <div class="table-wrap"><div class="scroll"><table><thead><tr><th>Fecha</th><th>Hora entrega</th><th>Entregado por</th><th>Qué se entrega</th><th>Destinatario</th><th>Estado</th><th>Retirado por</th><th>Hora recepción</th><th>Acciones</th></tr></thead><tbody id="records-body"></tbody></table></div><div class="empty" id="records-empty">Aún no hay registros.</div></div>
+    </section>
+    <section class="view" id="view-colaboradores"><h1>Colaboradores</h1><p class="subtitle">Esta lista es compartida para todas las personas que usan la aplicación.</p><div class="card"><div class="colab"><div class="field"><label>Nombre</label><input id="c-name" placeholder="Ej. Bryan Ortega"></div><div class="field"><label>Celular <span class="hint">(código de país, sin +)</span></label><input id="c-phone" placeholder="593987654321"></div><button class="btn primary" id="add-collaborator">Añadir</button></div><div class="error" id="collaborator-error"></div></div><div class="table-wrap"><div class="scroll"><table><thead><tr><th>Nombre</th><th>Celular</th><th></th></tr></thead><tbody id="collaborators-body"></tbody></table></div></div></section>
+  </main>
+  <div class="modal-bg" id="receive-modal"><div class="modal"><button class="close" data-close="receive-modal">×</button><h2>Registrar recepción</h2><p class="subtitle">Complete cuando se retire el documento.</p><div class="info" id="receive-info"></div><div class="field"><label>Nombre de quien retira</label><input id="r-name"></div><div class="field"><label>Firma de recepción</label><div class="sig-wrap"><canvas class="sigpad" id="sig-receive"></canvas><div class="placeholder" id="ph-receive">Firme aquí con el mouse o el dedo</div></div><div class="sig-actions"><button class="link" id="clear-receive">Limpiar firma</button></div></div><div class="error" id="receive-error"></div><div class="actions"><button class="btn secondary" data-close="receive-modal">Cancelar</button><button class="btn primary" id="confirm-receive">Confirmar recepción</button></div></div></div>
+  <div class="modal-bg" id="signatures-modal"><div class="modal"><button class="close" data-close="signatures-modal">×</button><h2>Detalle del registro</h2><div class="info" id="signatures-info"></div><div class="field"><label>Firma de entrega</label><img class="preview" id="delivery-signature" alt="Firma de entrega"></div><div class="field" id="receive-signature-wrap"><label>Firma de recepción</label><img class="preview" id="receive-signature" alt="Firma de recepción"></div></div></div>
+  <div class="toast" id="toast"></div>
+  <script>
+    'use strict';
+    // Reemplace solo esta URL si crea un nuevo despliegue de Apps Script.
+    const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxhwtZFAqRohif7iuE3AYkbsCPB_AZKhgmU2iEar7l3MpWu4kvXa_45tNqx_Bj_KovyqA/exec';
+    const REFRESH_MS = 30000;
+    let records = [], collaborators = [], filter = 'todos', activeRecordId = null, lastRecordId = null;
+    let deliveryPad, receivePad, refreshTimer, isRefreshing = false;
 
-      <div class="grid2">
-        <div class="field">
-          <label>Entregado por</label>
-          <input type="text" id="f-entregadoPor" placeholder="Nombre de quien entrega">
-        </div>
-        <div class="field">
-          <label>Destinatario <span class="hint">(colaborador que recibirá el aviso)</span></label>
-          <select id="f-destinatario"></select>
-        </div>
-      </div>
-
-      <div class="field">
-        <label>Qué se entrega</label>
-        <input type="text" id="f-descripcion" placeholder="Ej. Contrato firmado, factura, notificación...">
-      </div>
-
-      <div class="field">
-        <label>Firma de quien entrega</label>
-        <div class="sig-wrap" id="wrap-sig-entrega">
-          <canvas class="sigpad" id="sig-entrega"></canvas>
-          <div class="sig-placeholder" id="ph-sig-entrega">Firme aquí con el mouse o el dedo</div>
-        </div>
-        <div class="sig-actions">
-          <button class="link-btn" onclick="sigEntrega.clear()">Limpiar firma</button>
-          <span></span>
-        </div>
-      </div>
-
-      <div class="error-msg" id="entrega-error"></div>
-      <button class="btn btn-primary" id="btn-guardar-entrega" onclick="guardarEntrega()">Registrar entrega</button>
-    </div>
-
-    <!-- confirmation panel, hidden until saved -->
-    <div class="card" id="confirm-card" style="display:none;">
-      <div class="confirm-panel">
-        <div class="stamp">ENTREGADO<br>SPINGARN</div>
-        <div>
-          <div class="confirm-text">
-            <b id="confirm-title">Registro guardado</b>
-            <span id="confirm-body"></span>
-          </div>
-          <div class="confirm-actions">
-            <button class="btn btn-whatsapp" id="btn-whatsapp" onclick="enviarWhatsapp()">Enviar aviso por WhatsApp</button>
-            <button class="btn btn-ghost" onclick="nuevaEntregaMas()">Registrar otra entrega</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ================= VIEW: TRAZABILIDAD ================= -->
-  <div class="view" id="view-trazabilidad">
-    <h1>Trazabilidad de entregas y recepciones</h1>
-    <p class="subtitle">Registro centralizado de toda la gestión de mensajería documental.</p>
-
-    <div class="stats-row">
-      <div class="stat-card"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Registros totales</div></div>
-      <div class="stat-card"><div class="stat-num" id="stat-pendientes" style="color:var(--warning)">0</div><div class="stat-label">Pendientes de retiro</div></div>
-      <div class="stat-card"><div class="stat-num" id="stat-completados" style="color:var(--success)">0</div><div class="stat-label">Completados</div></div>
-    </div>
-
-    <div class="toolbar">
-      <div class="tabs">
-        <div class="tab active" data-filter="todos">Todos</div>
-        <div class="tab" data-filter="pendiente">Pendientes</div>
-        <div class="tab" data-filter="completado">Completados</div>
-      </div>
-      <div style="display:flex;gap:10px;">
-        <input type="text" class="search-box" id="buscador" placeholder="Buscar por nombre o documento...">
-        <button class="btn btn-ghost btn-sm" onclick="exportarExcel()">Exportar a Excel</button>
-      </div>
-    </div>
-
-    <div class="table-wrap">
-      <div class="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Hora entrega</th>
-              <th>Entregado por</th>
-              <th>Qué se entrega</th>
-              <th>Destinatario</th>
-              <th>Estado</th>
-              <th>Retirado por</th>
-              <th>Hora recepción</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tabla-body"></tbody>
-        </table>
-      </div>
-      <div class="empty-state" id="tabla-empty" style="display:none;">Aún no hay registros. Crea la primera entrega desde el menú lateral.</div>
-    </div>
-  </div>
-
-  <!-- ================= VIEW: COLABORADORES ================= -->
-  <div class="view" id="view-colaboradores">
-    <h1>Listado de colaboradores</h1>
-    <p class="subtitle">Nombres y celulares usados para el envío automático de avisos por WhatsApp.</p>
-
-    <div class="card">
-      <div class="colab-row">
-        <div class="field">
-          <label>Nombre</label>
-          <input type="text" id="c-nombre" placeholder="Ej. Bryan Ortega">
-        </div>
-        <div class="field">
-          <label>Celular <span class="hint">(código de país + número, sin +, ej. 593987654321)</span></label>
-          <input type="text" id="c-telefono" placeholder="593987654321">
-        </div>
-        <button class="btn btn-primary" style="height:44px;" onclick="agregarColaborador()">Añadir</button>
-      </div>
-      <div class="error-msg" id="colab-error"></div>
-    </div>
-
-    <div class="table-wrap">
-      <div class="table-scroll">
-        <table>
-          <thead><tr><th>Nombre</th><th>Celular</th><th></th></tr></thead>
-          <tbody id="colab-body"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-</div>
-
-<!-- ================= MODAL: RECEPCIÓN ================= -->
-<div class="modal-bg" id="modal-recepcion">
-  <div class="modal">
-    <button class="close-x" onclick="cerrarModalRecepcion()">&times;</button>
-    <h2>Registrar recepción</h2>
-    <div class="modal-sub">Complete cuando la persona se acerque a recepción a retirar el documento.</div>
-
-    <div class="info-box" id="modal-info-box"></div>
-
-    <div class="field">
-      <label>Nombre de quien retira</label>
-      <input type="text" id="r-retiradoPor">
-    </div>
-
-    <div class="field">
-      <label>Firma de recepción</label>
-      <div class="sig-wrap">
-        <canvas class="sigpad" id="sig-recepcion"></canvas>
-        <div class="sig-placeholder" id="ph-sig-recepcion">Firme aquí con el mouse o el dedo</div>
-      </div>
-      <div class="sig-actions">
-        <button class="link-btn" onclick="sigRecepcion.clear()">Limpiar firma</button>
-      </div>
-    </div>
-
-    <div class="error-msg" id="recepcion-error"></div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="cerrarModalRecepcion()">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmarRecepcion()">Confirmar recepción</button>
-    </div>
-  </div>
-</div>
-
-<!-- ================= MODAL: VER FIRMAS ================= -->
-<div class="modal-bg" id="modal-ver">
-  <div class="modal">
-    <button class="close-x" onclick="cerrarModalVer()">&times;</button>
-    <h2>Detalle del registro</h2>
-    <div class="info-box" id="ver-info-box"></div>
-    <div class="field"><label>Firma de entrega</label><img class="sig-preview" id="ver-firma-entrega"></div>
-    <div class="field" id="ver-firma-recepcion-wrap"><label>Firma de recepción</label><img class="sig-preview" id="ver-firma-recepcion"></div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script>
-/* ============================================================
-   ESTADO Y PERSISTENCIA
-   ============================================================ */
-let registros = [];
-let colaboradores = [];
-let filtroActual = 'todos';
-let registroActivoId = null; // registro siendo completado en el modal de recepción
-
-// URL fija del Web App de Google Apps Script — no editable desde la interfaz.
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxYjaj-V5wgoEHTbMlo6sSAUwFqvXhdVbM9bcRVtrwHIAtzD-oQXkwsLfcFNbttCJobjA/exec';
-
-const DEFAULT_COLABORADORES = [
-  { nombre: 'Andrés Ordóñez', telefono: '+593999707246' },
-  { nombre: 'Daniela Herrera', telefono: '+593986055436' },
-  { nombre: 'Daniela Hidalgo', telefono: '+593982725254' },
-  { nombre: 'Danna Vaca', telefono: '+593995248336' },
-  { nombre: 'David Anda', telefono: '+593999160926' },
-  { nombre: 'Diana Espinosa', telefono: '+593982504146' },
-  { nombre: 'Diego Armas', telefono: '+593985547354' },
-  { nombre: 'Javier Angulo', telefono: '+593989372077' },
-  { nombre: 'Juan Felipe Rivas', telefono: '+593998815397' },
-  { nombre: 'Kevyn Quelal', telefono: '+593999787348' },
-  { nombre: 'Leslie Galárraga', telefono: '+593939212811' },
-  { nombre: 'Lisseth Armijos', telefono: '+593985140445' },
-  { nombre: 'Lizzeth Villavicencio', telefono: '+593987925263' },
-  { nombre: 'Melissa Hidalgo', telefono: '+593987366857' },
-  { nombre: 'Nicole Andrade', telefono: '+593984999125' },
-  { nombre: 'Pablo Aguinaga', telefono: '+593984539732' },
-  { nombre: 'Salomé Analuiza', telefono: '+593995653804' },
-  { nombre: 'Sebastián Saá', telefono: '+593999935936' }
-];
-
-async function cargarDatos() {
-  try {
-    const respuesta = await fetch(SHEETS_URL);
-    registros = await respuesta.json();
-  } catch (e) {
-    registros = [];
-    console.error(e);
-  }
-  try {
-    colaboradores =
-      JSON.parse(localStorage.getItem("colaboradores"));
-    if (!colaboradores) {
-      colaboradores = DEFAULT_COLABORADORES;
-      guardarColaboradores();
+    function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+    function toast(message){const el=document.getElementById('toast');el.textContent=message;el.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('show'),3500);}
+    function setBusy(button, busy, label){button.disabled=busy;if(label)button.textContent=busy?'Guardando…':label;}
+    function apiUrl(action){return `${SHEETS_URL}?action=${encodeURIComponent(action)}&t=${Date.now()}`;}
+    async function request(action, payload){
+      const response = await fetch(SHEETS_URL, {method:'POST', body:new URLSearchParams({action, payload:JSON.stringify(payload)})});
+      if(!response.ok) throw new Error(`El servidor respondió ${response.status}.`);
+      const data = await response.json();
+      if(!data.ok) throw new Error(data.error || 'No se pudo guardar la información.');
+      return data;
     }
-  } catch {
-    colaboradores = DEFAULT_COLABORADORES;
-    guardarColaboradores();
-  } 
-}
-
-function sincronizarConSheets(registro){
-  if(!SHEETS_URL) return;
-  fetch(SHEETS_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(registro)
-  }).catch(() => { /* silencioso: no bloquea el flujo si falla la red */ });
-}
-
-async function guardarRegistros() {
-  try {
-    localStorage.setItem(
-      "registros",
-      JSON.stringify(registros)
-    );
-  } catch (e) {
-    mostrarToast("No se pudo guardar el registro.");
-  }
-}
-
-async function guardarColaboradores() {
-  try {
-    localStorage.setItem(
-      "colaboradores",
-      JSON.stringify(colaboradores)
-    );
-  } catch (e) {
-    mostrarToast("No se pudo guardar el listado.");
-  }
-}
-
-/* ============================================================
-   FIRMA (CANVAS)
-   ============================================================ */
-function crearFirmaPad(canvasId, placeholderId){
-  const canvas = document.getElementById(canvasId);
-  const placeholder = document.getElementById(placeholderId);
-  const ctx = canvas.getContext('2d');
-  let drawing = false;
-  let hasDrawn = false;
-  let last = {x:0,y:0};
-
-  function resize(){
-    const rect = canvas.getBoundingClientRect();
-    const ratio = window.devicePixelRatio || 1;
-    const imgData = hasDrawn ? canvas.toDataURL() : null;
-    canvas.width = rect.width * ratio;
-    canvas.height = rect.height * ratio;
-    ctx.scale(ratio, ratio);
-    ctx.lineWidth = 2.2;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = '#211e29';
-    if(imgData){
-      const img = new Image();
-      img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
-      img.src = imgData;
+    async function get(action){
+      const response = await fetch(apiUrl(action));
+      if(!response.ok) throw new Error(`El servidor respondió ${response.status}.`);
+      const data = await response.json();
+      if(!data.ok) throw new Error(data.error || 'No se pudieron cargar los datos.');
+      return data;
     }
-  }
+    async function refreshData(showError=false){
+      if(isRefreshing)return;isRefreshing=true;
+      try {const [recordData, collaboratorData]=await Promise.all([get('records_get'),get('collaborators_get')]);records=recordData.records||[];collaborators=collaboratorData.collaborators||[];populateRecipients();renderRecords();renderCollaborators();}
+      catch(error){console.error(error);if(showError)toast(`No se pudo conectar con Google Sheets: ${error.message}`);}
+      finally{isRefreshing=false;}
+    }
+    function populateRecipients(){const select=document.getElementById('f-destinatario');const current=select.value;select.innerHTML='<option value="">Seleccione un colaborador…</option>'+collaborators.map(c=>`<option value="${escapeHtml(c.id)}">${escapeHtml(c.nombre)}</option>`).join('');select.value=current;}
+    function nowFields(){const now=new Date();document.getElementById('f-fecha').value=now.toLocaleDateString('es-EC',{day:'2-digit',month:'2-digit',year:'numeric'});document.getElementById('f-hora').value=now.toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'});}
+    function signaturePad(canvasId, placeholderId){
+      const canvas=document.getElementById(canvasId), placeholder=document.getElementById(placeholderId), ctx=canvas.getContext('2d');let drawing=false, drawn=false,last;
+      function resize(){const image=drawn?canvas.toDataURL():null,rect=canvas.getBoundingClientRect(),ratio=devicePixelRatio||1;canvas.width=Math.round(rect.width*ratio);canvas.height=Math.round(rect.height*ratio);ctx.setTransform(ratio,0,0,ratio,0,0);ctx.lineWidth=2.2;ctx.lineCap='round';ctx.strokeStyle='#211e29';if(image){const img=new Image();img.onload=()=>ctx.drawImage(img,0,0,rect.width,rect.height);img.src=image;}}
+      function point(event){const r=canvas.getBoundingClientRect();return{x:event.clientX-r.left,y:event.clientY-r.top};}
+      canvas.addEventListener('pointerdown',e=>{e.preventDefault();canvas.setPointerCapture(e.pointerId);drawing=true;last=point(e);ctx.beginPath();ctx.arc(last.x,last.y,1.1,0,Math.PI*2);ctx.fillStyle='#211e29';ctx.fill();drawn=true;placeholder.hidden=true;});
+      canvas.addEventListener('pointermove',e=>{if(!drawing)return;e.preventDefault();const p=point(e);ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(p.x,p.y);ctx.stroke();last=p;});
+      canvas.addEventListener('pointerup',()=>drawing=false);canvas.addEventListener('pointercancel',()=>drawing=false);window.addEventListener('resize',resize);resize();
+      return {clear(){const r=canvas.getBoundingClientRect();ctx.clearRect(0,0,r.width,r.height);drawn=false;placeholder.hidden=false;},isEmpty(){return !drawn},toDataURL(){return canvas.toDataURL('image/png')}};
+    }
+    function setView(name){document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.view===name));document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===`view-${name}`));if(name!=='entrega')refreshData(false);if(name==='entrega')nowFields();}
+    document.querySelectorAll('.nav').forEach(button=>button.addEventListener('click',()=>setView(button.dataset.view)));
+    document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));button.classList.add('active');filter=button.dataset.filter;renderRecords();}));
+    document.getElementById('search').addEventListener('input',renderRecords);
 
-  function pos(e){
-    const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    return { x: clientX - rect.left, y: clientY - rect.top };
-  }
+    function renderRecords(){
+      const query=document.getElementById('search').value.trim().toLocaleLowerCase();const total=records.length,pending=records.filter(r=>r.estado==='pendiente').length;
+      document.getElementById('stat-total').textContent=total;document.getElementById('stat-pending').textContent=pending;document.getElementById('stat-completed').textContent=total-pending;
+      const list=records.filter(r=>{const text=[r.entregadoPor,r.destinatarioNombre,r.descripcion,r.retiradoPor].join(' ').toLocaleLowerCase();return(filter==='todos'||r.estado===filter)&&(!query||text.includes(query));});
+      document.getElementById('records-empty').hidden=list.length>0;document.getElementById('records-body').innerHTML=list.map(r=>`<tr><td class="mono">${escapeHtml(r.fecha)}</td><td class="mono">${escapeHtml(r.horaEntrega)}</td><td>${escapeHtml(r.entregadoPor)}</td><td>${escapeHtml(r.descripcion)}</td><td>${escapeHtml(r.destinatarioNombre)}</td><td><span class="badge ${r.estado==='completado'?'completed':'pending'}">${r.estado==='completado'?'Completado':'Pendiente'}</span></td><td>${escapeHtml(r.retiradoPor||'—')}</td><td class="mono">${escapeHtml(r.horaRecepcion||'—')}</td><td>${r.estado==='pendiente'?`<button class="btn primary small" data-receive="${escapeHtml(r.id)}">Registrar recepción</button>`:`<button class="btn secondary small" data-signatures="${escapeHtml(r.id)}">Ver firmas</button>`}</td></tr>`).join('');
+      document.querySelectorAll('[data-receive]').forEach(b=>b.addEventListener('click',()=>openReceive(b.dataset.receive)));document.querySelectorAll('[data-signatures]').forEach(b=>b.addEventListener('click',()=>openSignatures(b.dataset.signatures)));
+    }
+    function recordInfo(r){return `<div><div class="k">Fecha / hora entrega</div><div class="v">${escapeHtml(r.fecha)} · ${escapeHtml(r.horaEntrega)}</div></div><div><div class="k">Entregado por</div><div class="v">${escapeHtml(r.entregadoPor)}</div></div><div><div class="k">Documento</div><div class="v">${escapeHtml(r.descripcion)}</div></div><div><div class="k">Destinatario</div><div class="v">${escapeHtml(r.destinatarioNombre)}</div></div>`;}
+    function openReceive(id){const r=records.find(x=>x.id===id);if(!r)return;activeRecordId=id;document.getElementById('receive-info').innerHTML=recordInfo(r);document.getElementById('r-name').value=r.destinatarioNombre;document.getElementById('receive-error').textContent='';document.getElementById('receive-modal').classList.add('active');if(!receivePad)receivePad=signaturePad('sig-receive','ph-receive');else receivePad.clear();}
+    function openSignatures(id){const r=records.find(x=>x.id===id);if(!r)return;document.getElementById('signatures-info').innerHTML=recordInfo(r);document.getElementById('delivery-signature').src=r.firmaEntrega||'';const wrap=document.getElementById('receive-signature-wrap');wrap.hidden=!r.firmaRecepcion;if(r.firmaRecepcion)document.getElementById('receive-signature').src=r.firmaRecepcion;document.getElementById('signatures-modal').classList.add('active');}
+    function closeModal(id){document.getElementById(id).classList.remove('active');if(id==='receive-modal')activeRecordId=null;}
+    document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.dataset.close)));
+    document.getElementById('clear-entrega').addEventListener('click',()=>deliveryPad.clear());document.getElementById('clear-receive').addEventListener('click',()=>receivePad?.clear());
 
-  function start(e){
-    e.preventDefault();
-    drawing = true;
-    last = pos(e);
-  }
-  function move(e){
-    if(!drawing) return;
-    e.preventDefault();
-    const p = pos(e);
-    ctx.beginPath();
-    ctx.moveTo(last.x, last.y);
-    ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-    last = p;
-    if(!hasDrawn){ hasDrawn = true; placeholder.style.display = 'none'; }
-  }
-  function end(){ drawing = false; }
+    document.getElementById('save-delivery').addEventListener('click',async()=>{
+      const error=document.getElementById('entrega-error'), deliveredBy=document.getElementById('f-entregado').value.trim(), description=document.getElementById('f-descripcion').value.trim(), collaborator=collaborators.find(c=>c.id===document.getElementById('f-destinatario').value);error.textContent='';
+      if(!deliveredBy||!description||!collaborator||deliveryPad.isEmpty()){error.textContent='Completa los datos, selecciona un destinatario y firma la entrega.';return;}
+      const now=new Date(),record={id:`reg_${now.getTime()}_${crypto.getRandomValues(new Uint32Array(1))[0]}`,fecha:now.toLocaleDateString('es-EC',{day:'2-digit',month:'2-digit',year:'numeric'}),horaEntrega:now.toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'}),entregadoPor:deliveredBy,descripcion:description,destinatarioNombre:collaborator.nombre,destinatarioTelefono:collaborator.telefono,firmaEntrega:deliveryPad.toDataURL(),firmaRecepcion:'',estado:'pendiente',retiradoPor:'',fechaRecepcion:'',horaRecepcion:''};
+      const button=document.getElementById('save-delivery');setBusy(button,true,'Registrar entrega');try{await request('record_upsert',record);lastRecordId=record.id;await refreshData();document.getElementById('form-card').hidden=true;document.getElementById('confirm-card').hidden=false;document.getElementById('confirm-text').textContent=`${description} — entregado por ${deliveredBy} para ${collaborator.nombre}.`;toast('Entrega guardada en Google Sheets.');}catch(e){console.error(e);error.textContent=`No se pudo guardar: ${e.message}`;}finally{setBusy(button,false,'Registrar entrega');}
+    });
+    document.getElementById('confirm-receive').addEventListener('click',async()=>{
+      const error=document.getElementById('receive-error'),name=document.getElementById('r-name').value.trim(),record=records.find(r=>r.id===activeRecordId);error.textContent='';if(!record||!name||!receivePad||receivePad.isEmpty()){error.textContent='Ingresa quién retira y solicita su firma.';return;}const now=new Date(),updated={...record,retiradoPor:name,fechaRecepcion:now.toLocaleDateString('es-EC',{day:'2-digit',month:'2-digit',year:'numeric'}),horaRecepcion:now.toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'}),firmaRecepcion:receivePad.toDataURL(),estado:'completado'};const button=document.getElementById('confirm-receive');setBusy(button,true,'Confirmar recepción');try{await request('record_upsert',updated);await refreshData();closeModal('receive-modal');toast('Recepción registrada.');}catch(e){console.error(e);error.textContent=`No se pudo guardar: ${e.message}`;}finally{setBusy(button,false,'Confirmar recepción');}
+    });
+    document.getElementById('new-delivery').addEventListener('click',()=>{document.getElementById('confirm-card').hidden=true;document.getElementById('form-card').hidden=false;document.getElementById('f-entregado').value='';document.getElementById('f-descripcion').value='';document.getElementById('f-destinatario').value='';deliveryPad.clear();nowFields();});
+    document.getElementById('whatsapp').addEventListener('click',()=>{const r=records.find(x=>x.id===lastRecordId);if(!r)return toast('No se encontró el último registro.');const text=`Hola ${r.destinatarioNombre}, buen día. Le informamos que ha recibido un documento en recepción: "${r.descripcion}", entregado por ${r.entregadoPor} el ${r.fecha} a las ${r.horaEntrega}. Por favor acercarse a recepción para retirarlo. Gracias.`;window.open(`https://wa.me/${String(r.destinatarioTelefono).replace(/\D/g,'')}?text=${encodeURIComponent(text)}`,'_blank','noopener');});
 
-  canvas.addEventListener('pointerdown', start);
-  canvas.addEventListener('pointermove', move);
-  window.addEventListener('pointerup', end);
-  canvas.addEventListener('touchstart', start, {passive:false});
-  canvas.addEventListener('touchmove', move, {passive:false});
-  canvas.addEventListener('touchend', end);
-  window.addEventListener('resize', resize);
-  resize();
-
-  return {
-    clear(){
-      const rect = canvas.getBoundingClientRect();
-      ctx.clearRect(0,0,rect.width,rect.height);
-      hasDrawn = false;
-      placeholder.style.display = 'block';
-    },
-    isEmpty(){ return !hasDrawn; },
-    toDataURL(){ return canvas.toDataURL('image/png'); }
-  };
-}
-
-let sigEntrega, sigRecepcion;
-
-/* ============================================================
-   NAVEGACIÓN
-   ============================================================ */
-document.querySelectorAll('.nav-item').forEach(item => {
-  item.addEventListener('click', () => {
-    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-    item.classList.add('active');
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById('view-' + item.dataset.view).classList.add('active');
-    if(item.dataset.view === 'trazabilidad') renderTabla();
-    if(item.dataset.view === 'colaboradores') renderColaboradores();
-    if(item.dataset.view === 'entrega') actualizarFechaHora();
-  });
-});
-
-/* ============================================================
-   FORMULARIO: NUEVA ENTREGA
-   ============================================================ */
-function actualizarFechaHora(){
-  const now = new Date();
-  document.getElementById('f-fecha').value = now.toLocaleDateString('es-EC', {day:'2-digit',month:'2-digit',year:'numeric'});
-  document.getElementById('f-hora').value = now.toLocaleTimeString('es-EC', {hour:'2-digit',minute:'2-digit'});
-}
-
-function poblarSelectDestinatarios(){
-  const sel = document.getElementById('f-destinatario');
-  sel.innerHTML = '<option value="">Seleccione un colaborador...</option>' +
-    colaboradores.map((c,i) => `<option value="${i}">${escapeHtml(c.nombre)}</option>`).join('');
-}
-
-async function guardarEntrega(){
-  const errorEl = document.getElementById('entrega-error');
-  errorEl.textContent = '';
-
-  const entregadoPor = document.getElementById('f-entregadoPor').value.trim();
-  const descripcion = document.getElementById('f-descripcion').value.trim();
-  const destIdx = document.getElementById('f-destinatario').value;
-
-  if(!entregadoPor){ errorEl.textContent = 'Ingresa el nombre de quien entrega.'; return; }
-  if(!descripcion){ errorEl.textContent = 'Indica qué documento se entrega.'; return; }
-  if(destIdx === ''){ errorEl.textContent = 'Selecciona el colaborador destinatario.'; return; }
-  if(sigEntrega.isEmpty()){ errorEl.textContent = 'Se requiere la firma de quien entrega.'; return; }
-
-  const destinatario = colaboradores[destIdx];
-  const now = new Date();
-
-  const registro = {
-    id: 'reg_' + now.getTime() + '_' + Math.floor(Math.random()*1000),
-    fecha: now.toLocaleDateString('es-EC', {day:'2-digit',month:'2-digit',year:'numeric'}),
-    horaEntrega: now.toLocaleTimeString('es-EC', {hour:'2-digit',minute:'2-digit'}),
-    timestampEntrega: now.getTime(),
-    entregadoPor,
-    descripcion,
-    destinatarioNombre: destinatario.nombre,
-    destinatarioTelefono: destinatario.telefono,
-    firmaEntrega: sigEntrega.toDataURL(),
-    estado: 'pendiente',
-    mensajeEnviado: false,
-    retiradoPor: '',
-    horaRecepcion: '',
-    timestampRecepcion: null,
-    firmaRecepcion: ''
-  };
-
-  registros.unshift(registro);
-  await guardarRegistros();
-  sincronizarConSheets(registro);
-
-  // mostrar panel de confirmación / whatsapp
-  document.getElementById('entrega-form-card').style.display = 'none';
-  document.getElementById('confirm-card').style.display = 'block';
-  document.getElementById('confirm-title').textContent = 'Entrega registrada correctamente';
-  document.getElementById('confirm-body').textContent =
-    `${descripcion} — entregado por ${entregadoPor} para ${destinatario.nombre}, ${registro.fecha} ${registro.horaEntrega}.`;
-  window._ultimoRegistroId = registro.id;
-
-  mostrarToast('Entrega guardada. Envía el aviso por WhatsApp.');
-}
-
-function enviarWhatsapp(){
-  const reg = registros.find(r => r.id === window._ultimoRegistroId);
-  if(!reg) return;
-  const mensaje = `Hola ${reg.destinatarioNombre}, buen día. Le informamos que ha recibido un documento en recepción: "${reg.descripcion}", entregado por ${reg.entregadoPor} el ${reg.fecha} a las ${reg.horaEntrega}. Por favor acercarse a recepción para retirarlo. Gracias.`;
-  const url = `https://wa.me/${reg.destinatarioTelefono}?text=${encodeURIComponent(mensaje)}`;
-  window.open(url, '_blank');
-  reg.mensajeEnviado = true;
-  guardarRegistros();
-}
-
-function nuevaEntregaMas(){
-  document.getElementById('confirm-card').style.display = 'none';
-  document.getElementById('entrega-form-card').style.display = 'block';
-  document.getElementById('f-entregadoPor').value = '';
-  document.getElementById('f-descripcion').value = '';
-  document.getElementById('f-destinatario').value = '';
-  sigEntrega.clear();
-  actualizarFechaHora();
-}
-
-/* ============================================================
-   TABLA DE TRAZABILIDAD
-   ============================================================ */
-document.querySelectorAll('.tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    filtroActual = tab.dataset.filter;
-    renderTabla();
-  });
-});
-document.getElementById('buscador').addEventListener('input', renderTabla);
-
-function renderTabla(){
-  const total = registros.length;
-  const pendientes = registros.filter(r => r.estado === 'pendiente').length;
-  const completados = registros.filter(r => r.estado === 'completado').length;
-  document.getElementById('stat-total').textContent = total;
-  document.getElementById('stat-pendientes').textContent = pendientes;
-  document.getElementById('stat-completados').textContent = completados;
-
-  const q = document.getElementById('buscador').value.trim().toLowerCase();
-  let lista = registros.filter(r => {
-    if(filtroActual !== 'todos' && r.estado !== filtroActual) return false;
-    if(q && !(r.entregadoPor.toLowerCase().includes(q) || r.destinatarioNombre.toLowerCase().includes(q) || r.descripcion.toLowerCase().includes(q))) return false;
-    return true;
-  });
-
-  const tbody = document.getElementById('tabla-body');
-  const emptyState = document.getElementById('tabla-empty');
-
-  if(lista.length === 0){
-    tbody.innerHTML = '';
-    emptyState.style.display = 'block';
-    return;
-  }
-  emptyState.style.display = 'none';
-
-  tbody.innerHTML = lista.map(r => `
-    <tr>
-      <td class="mono">${r.fecha}</td>
-      <td class="mono">${r.horaEntrega}</td>
-      <td>${escapeHtml(r.entregadoPor)}</td>
-      <td>${escapeHtml(r.descripcion)}</td>
-      <td>${escapeHtml(r.destinatarioNombre)}</td>
-      <td><span class="badge ${r.estado}">${r.estado === 'pendiente' ? 'Pendiente' : 'Completado'}</span></td>
-      <td>${r.retiradoPor ? escapeHtml(r.retiradoPor) : '—'}</td>
-      <td class="mono">${r.horaRecepcion || '—'}</td>
-      <td>
-        ${r.estado === 'pendiente'
-          ? `<button class="btn btn-primary btn-sm" onclick="abrirModalRecepcion('${r.id}')">Registrar recepción</button>`
-          : `<button class="icon-btn" onclick="abrirModalVer('${r.id}')">Ver firmas</button>`}
-      </td>
-    </tr>
-  `).join('');
-}
-
-/* ---------- modal recepción ---------- */
-function abrirModalRecepcion(id){
-  registroActivoId = id;
-  const r = registros.find(x => x.id === id);
-  document.getElementById('modal-info-box').innerHTML = `
-    <div><div class="lbl">Fecha / Hora entrega</div><div class="val">${r.fecha} · ${r.horaEntrega}</div></div>
-    <div><div class="lbl">Entregado por</div><div class="val">${escapeHtml(r.entregadoPor)}</div></div>
-    <div><div class="lbl">Qué se entrega</div><div class="val">${escapeHtml(r.descripcion)}</div></div>
-    <div><div class="lbl">Destinatario</div><div class="val">${escapeHtml(r.destinatarioNombre)}</div></div>
-  `;
-  document.getElementById('r-retiradoPor').value = r.destinatarioNombre;
-  document.getElementById('recepcion-error').textContent = '';
-  document.getElementById('modal-recepcion').classList.add('active');
-  if(!sigRecepcion){
-    sigRecepcion = crearFirmaPad('sig-recepcion', 'ph-sig-recepcion');
-  } else {
-    sigRecepcion.clear();
-  }
-}
-function cerrarModalRecepcion(){
-  document.getElementById('modal-recepcion').classList.remove('active');
-  registroActivoId = null;
-}
-async function confirmarRecepcion(){
-  const errorEl = document.getElementById('recepcion-error');
-  const retiradoPor = document.getElementById('r-retiradoPor').value.trim();
-  if(!retiradoPor){ errorEl.textContent = 'Ingresa el nombre de quien retira el documento.'; return; }
-  if(sigRecepcion.isEmpty()){ errorEl.textContent = 'Se requiere la firma de recepción.'; return; }
-
-  const r = registros.find(x => x.id === registroActivoId);
-  const now = new Date();
-  r.retiradoPor = retiradoPor;
-  r.horaRecepcion = now.toLocaleTimeString('es-EC', {hour:'2-digit',minute:'2-digit'});
-  r.timestampRecepcion = now.getTime();
-  r.firmaRecepcion = sigRecepcion.toDataURL();
-  r.estado = 'completado';
-
-  await guardarRegistros();
-  sincronizarConSheets(r);
-  cerrarModalRecepcion();
-  renderTabla();
-  mostrarToast('Recepción registrada. Ciclo del documento cerrado.');
-}
-
-/* ---------- modal ver firmas ---------- */
-function abrirModalVer(id){
-  const r = registros.find(x => x.id === id);
-  document.getElementById('ver-info-box').innerHTML = `
-    <div><div class="lbl">Fecha</div><div class="val">${r.fecha}</div></div>
-    <div><div class="lbl">Qué se entrega</div><div class="val">${escapeHtml(r.descripcion)}</div></div>
-    <div><div class="lbl">Entregado por</div><div class="val">${escapeHtml(r.entregadoPor)} · ${r.horaEntrega}</div></div>
-    <div><div class="lbl">Retirado por</div><div class="val">${escapeHtml(r.retiradoPor)} · ${r.horaRecepcion}</div></div>
-  `;
-  document.getElementById('ver-firma-entrega').src = r.firmaEntrega;
-  if(r.firmaRecepcion){
-    document.getElementById('ver-firma-recepcion-wrap').style.display = 'block';
-    document.getElementById('ver-firma-recepcion').src = r.firmaRecepcion;
-  } else {
-    document.getElementById('ver-firma-recepcion-wrap').style.display = 'none';
-  }
-  document.getElementById('modal-ver').classList.add('active');
-}
-function cerrarModalVer(){
-  document.getElementById('modal-ver').classList.remove('active');
-}
-
-/* ============================================================
-   EXPORTAR A EXCEL
-   ============================================================ */
-function exportarExcel(){
-  if(registros.length === 0){ mostrarToast('No hay registros para exportar.'); return; }
-  const filas = registros.map(r => ({
-    'Fecha': r.fecha,
-    'Hora entrega': r.horaEntrega,
-    'Entregado por': r.entregadoPor,
-    'Qué se entrega': r.descripcion,
-    'Firma de entrega': r.firmaEntrega ? 'Sí' : 'No',
-    'Destinatario': r.destinatarioNombre,
-    'Celular destinatario': r.destinatarioTelefono,
-    'Aviso WhatsApp enviado': r.mensajeEnviado ? 'Sí' : 'No',
-    'Estado': r.estado === 'pendiente' ? 'Pendiente' : 'Completado',
-    'Retirado por': r.retiradoPor || '',
-    'Hora recepción': r.horaRecepcion || '',
-    'Firma de recepción': r.firmaRecepcion ? 'Sí' : 'No'
-  }));
-  const ws = XLSX.utils.json_to_sheet(filas);
-  ws['!cols'] = [
-    {wch:11},{wch:11},{wch:20},{wch:28},{wch:14},{wch:20},{wch:16},{wch:16},{wch:12},{wch:20},{wch:14},{wch:14}
-  ];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Trazabilidad');
-  XLSX.writeFile(wb, 'Control_Entrega_Recepcion_Documentos.xlsx');
-  mostrarToast('Excel exportado.');
-}
-
-/* ============================================================
-   COLABORADORES
-   ============================================================ */
-function renderColaboradores(){
-  const tbody = document.getElementById('colab-body');
-  if(colaboradores.length === 0){
-    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:30px;">No hay colaboradores registrados.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = colaboradores.map((c,i) => `
-    <tr>
-      <td>${escapeHtml(c.nombre)}</td>
-      <td class="mono">${escapeHtml(c.telefono)}</td>
-      <td><button class="icon-btn" onclick="eliminarColaborador(${i})">Eliminar</button></td>
-    </tr>
-  `).join('');
-}
-
-async function agregarColaborador(){
-  const errorEl = document.getElementById('colab-error');
-  errorEl.textContent = '';
-  const nombre = document.getElementById('c-nombre').value.trim();
-  const telefono = document.getElementById('c-telefono').value.trim().replace(/[^0-9]/g, '');
-
-  if(!nombre){ errorEl.textContent = 'Ingresa el nombre del colaborador.'; return; }
-  if(!telefono || telefono.length < 9){ errorEl.textContent = 'Ingresa un celular válido con código de país (ej. 593987654321).'; return; }
-
-  colaboradores.push({ nombre, telefono });
-  await guardarColaboradores();
-  document.getElementById('c-nombre').value = '';
-  document.getElementById('c-telefono').value = '';
-  renderColaboradores();
-  poblarSelectDestinatarios();
-  mostrarToast('Colaborador añadido.');
-}
-
-async function eliminarColaborador(idx){
-  colaboradores.splice(idx, 1);
-  await guardarColaboradores();
-  renderColaboradores();
-  poblarSelectDestinatarios();
-}
-
-/* ============================================================
-   UTILIDADES
-   ============================================================ */
-function escapeHtml(str){
-  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-}
-let toastTimeout;
-function mostrarToast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(toastTimeout);
-  toastTimeout = setTimeout(() => t.classList.remove('show'), 3200);
-}
-
-/* ============================================================
-   INIT
-   ============================================================ */
-(async function init(){
-  await cargarDatos();
-  poblarSelectDestinatarios();
-  actualizarFechaHora();
-  sigEntrega = crearFirmaPad('sig-entrega', 'ph-sig-entrega');
-  renderTabla();
-  renderColaboradores();
-  setInterval(actualizarFechaHora, 30000);
-    setInterval(async ()=>{
-      await cargarDatos();
-      renderTabla();
-  },30000)
-})();
-</script>
+    function renderCollaborators(){const body=document.getElementById('collaborators-body');body.innerHTML=collaborators.length?collaborators.map(c=>`<tr><td>${escapeHtml(c.nombre)}</td><td class="mono">${escapeHtml(c.telefono)}</td><td><button class="btn secondary small" data-delete-collaborator="${escapeHtml(c.id)}">Eliminar</button></td></tr>`).join(''):'<tr><td colspan="3" class="empty">No hay colaboradores.</td></tr>';document.querySelectorAll('[data-delete-collaborator]').forEach(b=>b.addEventListener('click',()=>deleteCollaborator(b.dataset.deleteCollaborator)));}
+    document.getElementById('add-collaborator').addEventListener('click',async()=>{const error=document.getElementById('collaborator-error'),nombre=document.getElementById('c-name').value.trim(),telefono=document.getElementById('c-phone').value.replace(/\D/g,'');error.textContent='';if(!nombre||telefono.length<9){error.textContent='Ingresa un nombre y un celular válido con código de país.';return;}const button=document.getElementById('add-collaborator');setBusy(button,true,'Añadir');try{await request('collaborator_upsert',{nombre,telefono});document.getElementById('c-name').value='';document.getElementById('c-phone').value='';await refreshData();toast('Colaborador añadido.');}catch(e){error.textContent=`No se pudo guardar: ${e.message}`;}finally{setBusy(button,false,'Añadir');}});
+    async function deleteCollaborator(id){if(!confirm('¿Eliminar este colaborador de la lista compartida?'))return;try{await request('collaborator_delete',{id});await refreshData();toast('Colaborador eliminado.');}catch(e){toast(`No se pudo eliminar: ${e.message}`);}}
+    document.getElementById('export').addEventListener('click',()=>{if(!records.length)return toast('No hay registros para exportar.');const rows=records.map(r=>({'ID':r.id,'Fecha entrega':r.fecha,'Hora entrega':r.horaEntrega,'Entregado por':r.entregadoPor,'Qué se entrega':r.descripcion,'Destinatario':r.destinatarioNombre,'Celular':r.destinatarioTelefono,'Estado':r.estado,'Retirado por':r.retiradoPor,'Fecha recepción':r.fechaRecepcion,'Hora recepción':r.horaRecepcion,'Firma entrega':r.firmaEntrega?'Sí':'No','Firma recepción':r.firmaRecepcion?'Sí':'No'}));const ws=XLSX.utils.json_to_sheet(rows);ws['!cols']=[{wch:28},{wch:14},{wch:14},{wch:22},{wch:34},{wch:22},{wch:18},{wch:14},{wch:22},{wch:16},{wch:16},{wch:16},{wch:18}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Trazabilidad');XLSX.writeFile(wb,'Control_Entrega_Recepcion.xlsx');});
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshData(false)});
+    (async function init(){deliveryPad=signaturePad('sig-entrega','ph-entrega');nowFields();await refreshData(true);setInterval(nowFields,1000);refreshTimer=setInterval(()=>refreshData(false),REFRESH_MS);})();
+  </script>
 </body>
 </html>
+
